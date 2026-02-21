@@ -1,0 +1,66 @@
+# This workflow will generate html documentation from asciidoc and publish it to `gh-pages` branch
+name: (WF-docs) Deploy documentation
+
+on:
+  workflow_call:
+    inputs:
+      runs-on-os:
+        required: false
+        type: string
+        default: 'ubuntu-latest'
+        description: 'Operating system to run the job on'
+      java-version:
+        required: false
+        type: string
+        default: '21'
+        description: 'Java version to use for the job'
+
+jobs:
+  generate-and-deploy:
+    runs-on: ${{ inputs.runs-on-os }}
+    steps:
+      - name: Checkout branch [master]
+        uses: actions/checkout@v4
+        with:
+          ref: master
+
+      - name: Push [master] to [gh-pages]
+        shell: bash
+        run: git push origin master:gh-pages --force
+
+      - name: Checkout [gh-pages]
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+
+      - name: Set up JDK ${{ inputs.java-version }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ inputs.java-version }}
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Generate docs with Maven
+        run: |
+          mvn org.asciidoctor:asciidoctor-maven-plugin:2.2.6:process-asciidoc \
+          -Dasciidoctor.sourceDirectory=./docs \
+          -Dasciidoctor.outputDirectory=. \
+          -Dasciidoctor.preserveDirectories=true \
+          -Dasciidoctor.sourceHighlighter=coderay \
+          -Dasciidoctor.backend=html5
+
+      - name: Configure GIT for signed commit
+        shell: bash
+        run: |
+          git config --global user.name "${{ secrets.TECHUSER_USERNAME }}"
+          git config --global user.email "${{ secrets.TECHUSER_EMAIL }}"
+          git config --global user.signingkey "${{ secrets.TECHUSER_GPG_KEY_ID }}"
+          git config --global commit.gpgsign true
+          git config --global tag.gpgSign true
+
+      - name: Commit and push to [gh-pages]
+        shell: bash
+        run: |
+          git add .
+          git commit -m "Add auto-generated documentation"
+          git push origin gh-pages --force
