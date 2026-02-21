@@ -14,24 +14,34 @@ on:
         type: string
         default: '21'
         description: 'Java version to use for the job'
+      source-branch:
+        required: false
+        type: string
+        default: 'main'
+        description: 'Source branch to use for the job'
+      target-branch:
+        required: false
+        type: string
+        default: 'gh-pages'
+        description: 'Target branch to deploy the documentation'
 
 jobs:
   generate-and-deploy:
     runs-on: ${{ inputs.runs-on-os }}
     steps:
-      - name: Checkout branch [master]
+      - name: Checkout branch [${{ inputs.source-branch }}]
         uses: actions/checkout@v4
         with:
-          ref: master
+          ref: ${{ inputs.source-branch }}
 
-      - name: Push [master] to [gh-pages]
+      - name: Push [${{ inputs.source-branch }}] to [${{ inputs.target-branch }}]
         shell: bash
-        run: git push origin master:gh-pages --force
+        run: git push origin ${{ inputs.source-branch }}:${{ inputs.target-branch }} --force
 
-      - name: Checkout [gh-pages]
+      - name: Checkout [${{ inputs.target-branch }}]
         uses: actions/checkout@v4
         with:
-          ref: gh-pages
+          ref: ${{ inputs.target-branch }}
 
       - name: Set up JDK ${{ inputs.java-version }}
         uses: actions/setup-java@v4
@@ -58,9 +68,9 @@ jobs:
           git config --global commit.gpgsign true
           git config --global tag.gpgSign true
 
-      - name: Commit and push to [gh-pages]
+      - name: Commit and push to [${{ inputs.target-branch }}]
         shell: bash
         run: |
           git add .
           git commit -m "Add auto-generated documentation"
-          git push origin gh-pages --force
+          git push origin ${{ inputs.target-branch }} --force
