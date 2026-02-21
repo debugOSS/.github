@@ -48,16 +48,9 @@ jobs:
         with:
           java-version: ${{ inputs.java-version }}
           distribution: 'temurin'
+          gpg-private-key: ${{ secrets.TECHUSER_GPG_PRIVATE_KEY }}
+          gpg-passphrase: MAVEN_GPG_PASSPHRASE # env variable for GPG private key passphrase
           cache: 'maven'
-
-      - name: Generate docs with Maven
-        run: |
-          mvn org.asciidoctor:asciidoctor-maven-plugin:2.2.6:process-asciidoc \
-          -Dasciidoctor.sourceDirectory=./docs \
-          -Dasciidoctor.outputDirectory=. \
-          -Dasciidoctor.preserveDirectories=true \
-          -Dasciidoctor.sourceHighlighter=coderay \
-          -Dasciidoctor.backend=html5
 
       - name: Configure GIT for signed commit
         shell: bash
@@ -67,6 +60,30 @@ jobs:
           git config --global user.signingkey "${{ secrets.TECHUSER_GPG_KEY_ID }}"
           git config --global commit.gpgsign true
           git config --global tag.gpgSign true
+
+      - name: Verify GIT configuration
+        shell: bash
+        run: |
+          # Verify Git config is set
+          echo "Checking Git configuration..."
+          git config --list | grep user.name
+          git config --list | grep user.email
+          git config --list | grep signingkey
+          # Test GPG key accessibility
+          echo "Testing GPG key..."
+          gpg --list-secret-keys
+          # Create a test commit (not pushed) to verify signing works
+          echo "Testing commit signing..."
+          git commit --allow-empty -m "test: verify gpg signing" --dry-run
+
+      - name: Generate docs with Maven
+        run: |
+          mvn org.asciidoctor:asciidoctor-maven-plugin:2.2.6:process-asciidoc \
+          -Dasciidoctor.sourceDirectory=./docs \
+          -Dasciidoctor.outputDirectory=. \
+          -Dasciidoctor.preserveDirectories=true \
+          -Dasciidoctor.sourceHighlighter=coderay \
+          -Dasciidoctor.backend=html5
 
       - name: Commit and push to [${{ inputs.target-branch }}]
         shell: bash
