@@ -74,7 +74,8 @@ jobs:
           gpg --list-secret-keys
           # Create a test commit (not pushed) to verify signing works
           echo "Testing commit signing..."
-          git commit --allow-empty -m "test: verify gpg signing" --dry-run
+          git commit --allow-empty -m "test: verify gpg signing" && git reset --soft HEAD~1
+          echo "GPG signing verification successful!"
 
       - name: Generate docs with Maven
         run: |
